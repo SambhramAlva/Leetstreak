@@ -1,0 +1,91 @@
+import React, { useCallback, useState } from "react";
+import { View, Text, StyleSheet, FlatList, RefreshControl } from "react-native";
+import { useTheme } from "@/theme/ThemeProvider";
+import { spacing } from "@/theme/theme";
+import { Screen, LoadingState, ErrorState, OfflineBanner } from "@/components/Shared";
+import { StreakCard } from "@/components/StreakCard";
+import { MemberRow } from "@/components/MemberRow";
+import { useMyStreak, useSyncLeetCode } from "@/hooks/useStreak";
+import { useGroupMembers } from "@/hooks/useGroup";
+import type { Group } from "@/types/database";
+
+export function HomeScreen({ userId, group }: { userId: string; group: Group }) {
+  const { colors } = useTheme();
+  const { data: streak, isLoading: streakLoading } = useMyStreak(userId);
+  const {
+    data: members,
+    isLoading: membersLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useGroupMembers(group.id);
+  const sync = useSyncLeetCode(userId);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const me = members?.find((m) => m.id === userId);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await sync.mutateAsync();
+      await refetch();
+    } catch {
+      // Sync failing (e.g. offline, or LeetCode not connected yet) shouldn't
+      // block viewing cached data — the OfflineBanner communicates it instead.
+    } finally {
+      setRefreshing(false);
+    }
+  }, [sync, refetch]);
+
+  if (streakLoading || membersLoading) {
+    return (
+      <Screen>
+        <LoadingState label="Loading your streak..." />
+      </Screen>
+    );
+  }
+
+  if (isError && !members) {
+    return (
+      <Screen>
+        <ErrorState message="Couldn't load your group." onRetry={refetch} />
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen>
+      <OfflineBanner visible={isError && !!members} />
+      <FlatList
+        data={members ?? []}
+        keyExtractor={(m) => m.id}
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing || isFetching} onRefresh={onRefresh} />}
+        ListHeaderComponent={
+          <View style={{ gap: spacing.lg, marginBottom: spacing.lg }}>
+            <View>
+              <Text style={[styles.groupName, { color: colors.textMuted }]}>{group.name}</Text>
+              <Text style={[styles.heading, { color: colors.text }]}>Your streak</Text>
+            </View>
+            <StreakCard
+              streak={streak}
+              solvedToday={me?.solvedToday ?? false}
+              solvedCountToday={me?.solvedCountToday ?? 0}
+            />
+            <Text style={[styles.heading, { color: colors.text }]}>Group progress</Text>
+          </View>
+        }
+        renderItem={({ item }) => <MemberRow member={item} />}
+        ListEmptyComponent={
+          <Text style={{ color: colors.textMuted, textAlign: "center" }}>No members yet.</Text>
+        }
+      />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  list: { padding: spacing.lg },
+  groupName: { fontSize: 13, fontWeight: "600", marginBottom: 2 },
+  heading: { fontSize: 20, fontWeight: "700" },
+});

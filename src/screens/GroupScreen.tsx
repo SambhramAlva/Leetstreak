@@ -1,0 +1,139 @@
+import React, { useState } from "react";
+import { View, Text, StyleSheet, FlatList, Share, Modal } from "react-native";
+import { useTheme } from "@/theme/ThemeProvider";
+import { spacing, radius } from "@/theme/theme";
+import { Screen, LoadingState, ErrorState, TextField, Button } from "@/components/Shared";
+import { ProblemOfDayCard } from "@/components/ProblemOfDayCard";
+import { MemberRow } from "@/components/MemberRow";
+import { useGroupMembers } from "@/hooks/useGroup";
+import { useTodaysPotd, useProposePotd } from "@/hooks/usePotd";
+import type { Group } from "@/types/database";
+
+// Turns a LeetCode problem URL into a slug + a readable title, e.g.
+// https://leetcode.com/problems/two-sum/ -> ("two-sum", "Two Sum")
+function parseLeetCodeUrl(url: string): { slug: string; title: string } | null {
+  const match = url.match(/leetcode\.com\/problems\/([a-z0-9-]+)/i);
+  if (!match) return null;
+  const slug = match[1];
+  const title = slug
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+  return { slug, title };
+}
+
+export function GroupScreen({ userId, group }: { userId: string; group: Group }) {
+  const { colors } = useTheme();
+  const { data: members, isLoading: membersLoading, isError, refetch } = useGroupMembers(group.id);
+  const { data: potdData, isLoading: potdLoading } = useTodaysPotd(group.id);
+  const proposePotd = useProposePotd(group.id, userId);
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  async function submitProposal() {
+    const parsed = parseLeetCodeUrl(urlInput.trim());
+    if (!parsed) {
+      setFormError("Paste a valid LeetCode problem link, e.g. leetcode.com/problems/two-sum/");
+      return;
+    }
+    try {
+      await proposePotd.mutateAsync({ title: parsed.title, titleSlug: parsed.slug, url: urlInput.trim() });
+      setModalVisible(false);
+      setUrlInput("");
+      setFormError(null);
+    } catch (e: any) {
+      setFormError(e.message ?? "Couldn't set the problem of the day.");
+    }
+  }
+
+  function shareInvite() {
+    Share.share({
+      message: `Join my LeetStreak group "${group.name}"! Use invite code ${group.invite_code} in the app.`,
+    });
+  }
+
+  if (membersLoading || potdLoading) {
+    return (
+      <Screen>
+        <LoadingState label="Loading group..." />
+      </Screen>
+    );
+  }
+
+  if (isError && !members) {
+    return (
+      <Screen>
+        <ErrorState message="Couldn't load this group." onRetry={refetch} />
+      </Screen>
+    );
+  }
+
+  const solvedCount = potdData?.solvedByUserIds.length ?? 0;
+
+  return (
+    <Screen>
+      <FlatList
+        data={members ?? []}
+        keyExtractor={(m) => m.id}
+        contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
+            <View style={styles.headerRow}>
+              <View>
+                <Text style={[styles.groupName, { color: colors.text }]}>{group.name}</Text>
+                <Text style={[styles.code, { color: colors.textMuted }]}>Code: {group.invite_code}</Text>
+              </View>
+              <Button title="Invite" onPress={shareInvite} variant="secondary" />
+            </View>
+
+            <ProblemOfDayCard
+              potd={potdData?.potd ?? null}
+              solvedCount={solvedCount}
+              memberCount={members?.length ?? 0}
+              onPropose={() => setModalVisible(true)}
+            />
+
+            <Text style={[styles.heading, { color: colors.text }]}>Members</Text>
+          </View>
+        }
+        renderItem={({ item }) => <MemberRow member={item} />}
+      />
+
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Propose today's problem</Text>
+            <TextField
+              placeholder="https://leetcode.com/problems/two-sum/"
+              autoCapitalize="none"
+              value={urlInput}
+              onChangeText={setUrlInput}
+            />
+            {formError && <Text style={{ color: colors.danger, marginTop: spacing.xs }}>{formError}</Text>}
+            <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Button title="Cancel" variant="secondary" onPress={() => setModalVisible(false)} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button title="Set problem" onPress={submitProposal} loading={proposePotd.isPending} />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  list: { padding: spacing.lg },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  groupName: { fontSize: 22, fontWeight: "700" },
+  code: { fontSize: 13, marginTop: 2 },
+  heading: { fontSize: 16, fontWeight: "700", marginTop: spacing.sm },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalCard: { padding: spacing.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
+  modalTitle: { fontSize: 17, fontWeight: "700", marginBottom: spacing.md },
+});

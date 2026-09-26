@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "LeetStreak",
+    "slug": "leetstreak",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "leetstreak",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yourteam.leetstreak"
+    },
+    "android": {
+      "package": "com.yourteam.leetstreak",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F1115"
+      }
+    },
+    "plugins": ["expo-notifications"]
+  }
+}
