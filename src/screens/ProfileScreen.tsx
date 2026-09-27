@@ -148,7 +148,6 @@ export function ProfileScreen({ userId }: { userId: string }) {
     <Screen>
       <ScrollView contentContainerStyle={styles.container}>
         {profileHeader}
-
         {!isMobile ? (
           <View style={styles.gridRow}>
             <View style={styles.leftCol}>{leetcodeSection}</View>

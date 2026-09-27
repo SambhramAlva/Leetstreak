@@ -239,8 +239,10 @@ create policy "potd_solves: insert self" on potd_solves for insert
   with check (user_id = auth.uid());
 
 -- MESSAGES: members can read/write within their own groups.
+drop policy if exists "messages: read if member" on messages;
 create policy "messages: read if member" on messages for select
   using (is_group_member(group_id));
+drop policy if exists "messages: insert if member" on messages;
 create policy "messages: insert if member" on messages for insert
   with check (is_group_member(group_id) and user_id = auth.uid());
 

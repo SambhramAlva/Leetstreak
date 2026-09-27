@@ -6,7 +6,13 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "leetstreak",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "splash": {
+      "backgroundColor": "#0F1115",
+      "resizeMode": "contain"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.yourteam.leetstreak"
@@ -15,8 +21,16 @@
       "package": "com.yourteam.leetstreak",
       "adaptiveIcon": {
         "backgroundColor": "#0F1115"
-      }
+      },
+      "versionCode": 2
     },
-    "plugins": ["expo-notifications"]
+    "plugins": [
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "346639e3-1d53-4c81-8879-c60392158dcc"
+      }
+    }
   }
 }

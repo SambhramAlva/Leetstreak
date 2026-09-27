@@ -1,28 +1,28 @@
 export const lightColors = {
-  background: "#F7F8FA",
+  background: "#F5F5F5",
   surface: "#FFFFFF",
-  border: "#E7E9EC",
-  text: "#14171A",
-  textMuted: "#6B7280",
-  primary: "#22C55E", // green — matches "solved" state
-  danger: "#EF4444",
+  border: "#E5E5E5",
+  text: "#262626",
+  textMuted: "#767676",
+  primary: "#FFA116",
+  danger: "#EF4743",
   card: "#FFFFFF",
   tabBar: "#FFFFFF",
 };
 
 export const darkColors = {
-  background: "#0F1115",
-  surface: "#181B21",
-  border: "#262A31",
-  text: "#F2F3F5",
-  textMuted: "#9AA0A6",
-  primary: "#22C55E",
-  danger: "#F87171",
-  card: "#181B21",
-  tabBar: "#14161B",
+  background: "#1A1A1A",
+  surface: "#282828",
+  border: "#3C3C3C",
+  text: "#EFF1F3",
+  textMuted: "#A7A7A7",
+  primary: "#FFA116",
+  danger: "#FF716B",
+  card: "#282828",
+  tabBar: "#282828",
 };
 
 export type ThemeColors = typeof lightColors;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
-export const radius = { sm: 8, md: 14, lg: 20, full: 999 };
+export const radius = { sm: 4, md: 6, lg: 8, full: 999 };

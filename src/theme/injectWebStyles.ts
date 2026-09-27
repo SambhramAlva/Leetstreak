@@ -9,14 +9,20 @@ export function injectWebStyles() {
   const style = document.createElement("style");
   style.id = styleId;
   style.textContent = `
-    /* Smooth fonts & rendering */
+    /* LeetCode-inspired utility interface: compact, neutral, and crisp. */
     html, body, #root {
       height: 100%;
       margin: 0;
       padding: 0;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      background: #f5f5f5;
+      color: #262626;
+    }
+
+    ::selection {
+      background: rgba(255, 161, 22, 0.24);
     }
 
     /* Custom Web Scrollbars */
@@ -28,16 +34,21 @@ export function injectWebStyles() {
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(150, 150, 150, 0.3);
-      border-radius: 4px;
+      background: #c7c7c7;
+      border-radius: 3px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(150, 150, 150, 0.5);
+      background: #a7a7a7;
     }
 
     /* Web transitions for interactive elements */
     button, a, [role="button"] {
       transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid #ffa116;
+      outline-offset: 2px;
     }
   `;
   document.head.appendChild(style);

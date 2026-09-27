@@ -27,8 +27,8 @@ export function GroupOnboardingScreen({ userId }: { userId: string }) {
         if (!code.trim()) throw new Error("Enter an invite code");
         await joinGroup(code.trim());
       }
-      // useMyGroup query invalidates on success, so RootNavigator will switch
-      // to the main tabs automatically once the group appears.
+      // The groups query invalidates on success, so RootNavigator will switch
+      // to the main tabs automatically once the membership appears.
     } catch (e: any) {
       setError(e.message ?? "Something went wrong");
     } finally {

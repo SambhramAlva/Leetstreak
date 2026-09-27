@@ -3,10 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { Group, Profile, Streak } from "@/types/database";
 
-// LeetStreak keeps things simple: one active group per user (matches the
-// "Home | Group | Chat | Profile" nav — no group switcher needed). Users can
-// still leave and join a different group from Profile.
-
 export type MemberWithStats = Profile & {
   streak: Streak | null;
   solvedToday: boolean;
@@ -21,29 +17,34 @@ function todayRangeUTC() {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-export function useMyGroup(userId: string | undefined) {
+export function useMyGroups(userId: string | undefined) {
   return useQuery({
-    queryKey: ["my-group", userId],
-    queryFn: async (): Promise<Group | null> => {
+    queryKey: ["my-groups", userId],
+    queryFn: async (): Promise<Group[]> => {
       const { data: membership, error: memErr } = await supabase
         .from("group_members")
         .select("group_id")
         .eq("user_id", userId!)
-        .limit(1)
-        .maybeSingle();
+        .order("joined_at", { ascending: true });
       if (memErr) throw memErr;
-      if (!membership) return null;
+      const groupIds = (membership ?? []).map((row) => row.group_id);
+      if (groupIds.length === 0) return [];
 
-      const { data: group, error: groupErr } = await supabase
+      const { data: groups, error: groupErr } = await supabase
         .from("groups")
         .select("*")
-        .eq("id", membership.group_id)
-        .single();
+        .in("id", groupIds);
       if (groupErr) throw groupErr;
-      return group;
+      const order = new Map(groupIds.map((id, index) => [id, index]));
+      return (groups ?? []).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
     },
     enabled: !!userId,
   });
+}
+
+export function useMyGroup(userId: string | undefined) {
+  const query = useMyGroups(userId);
+  return { ...query, data: query.data?.[0] ?? null };
 }
 
 function generateInviteCode(): string {
@@ -86,7 +87,7 @@ export function useGroupActions(userId: string | undefined) {
       .insert({ group_id: group.id, user_id: userId, role: "owner" });
     if (memberErr) throw memberErr;
 
-    queryClient.invalidateQueries({ queryKey: ["my-group", userId] });
+    queryClient.invalidateQueries({ queryKey: ["my-groups", userId] });
     return group;
   }
 
@@ -96,7 +97,7 @@ export function useGroupActions(userId: string | undefined) {
 
     const { data, error } = await supabase.rpc("join_group_by_code", { code: code.trim().toUpperCase() });
     if (error) throw error;
-    queryClient.invalidateQueries({ queryKey: ["my-group", userId] });
+    queryClient.invalidateQueries({ queryKey: ["my-groups", userId] });
     return data as unknown as Group;
   }
 

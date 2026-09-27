@@ -4,22 +4,26 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { spacing, radius } from "@/theme/theme";
 import type { Group } from "@/types/database";
 
-type TabName = "Home" | "Group" | "Chat" | "Profile";
+type TabName = "Home" | "Group" | "Chat" | "Profile" | "Admin";
 
 interface DesktopHeaderProps {
   currentTab: TabName;
   onSelectTab: (tab: TabName) => void;
   group?: Group;
+  groups?: Group[];
+  onSelectGroup?: (group: Group) => void;
+  isAdmin?: boolean;
 }
 
-const TABS: { name: TabName; label: string; icon: string }[] = [
-  { name: "Home", label: "Home", icon: "🏠" },
-  { name: "Group", label: "Group", icon: "👥" },
-  { name: "Chat", label: "Chat", icon: "💬" },
-  { name: "Profile", label: "Profile", icon: "🙂" },
+const TABS: { name: TabName; label: string }[] = [
+  { name: "Home", label: "Home" },
+  { name: "Group", label: "Group" },
+  { name: "Chat", label: "Chat" },
+  { name: "Profile", label: "Profile" },
+  { name: "Admin", label: "Admin" },
 ];
 
-export function DesktopHeader({ currentTab, onSelectTab, group }: DesktopHeaderProps) {
+export function DesktopHeader({ currentTab, onSelectTab, group, groups = [], onSelectGroup, isAdmin = false }: DesktopHeaderProps) {
   const { colors, mode, setMode } = useTheme();
 
   function cycleTheme() {
@@ -28,24 +32,33 @@ export function DesktopHeader({ currentTab, onSelectTab, group }: DesktopHeaderP
     else setMode("dark");
   }
 
-  const themeIcon = mode === "dark" ? "🌙" : mode === "light" ? "☀️" : "💻";
-
   return (
     <View style={[styles.headerContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
       <View style={styles.headerContent}>
         {/* Brand logo & Group Badge */}
         <View style={styles.brandRow}>
-          <Text style={[styles.brandLogo, { color: colors.primary }]}>🔥 LeetStreak</Text>
-          {group && (
-            <View style={[styles.groupBadge, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.groupBadgeText, { color: colors.textMuted }]}>👥 {group.name}</Text>
+          <Text style={[styles.brandLogo, { color: colors.primary }]}>LeetStreak</Text>
+          {groups.length > 0 && (
+            <View style={styles.groupSwitcher}>
+              {groups.map((item) => {
+                const isActive = item.id === group?.id;
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => onSelectGroup?.(item)}
+                    style={[styles.groupBadge, { backgroundColor: isActive ? colors.primary : colors.background, borderColor: isActive ? colors.primary : colors.border }, Platform.OS === "web" && ({ cursor: "pointer" } as any)]}
+                  >
+                    <Text style={[styles.groupBadgeText, { color: isActive ? "#fff" : colors.textMuted }]}>{item.name}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           )}
         </View>
 
         {/* Center Nav Tabs */}
         <View style={styles.tabGroup}>
-          {TABS.map((t) => {
+          {TABS.filter((tab) => tab.name !== "Admin" || isAdmin).map((t) => {
             const isActive = currentTab === t.name;
             return (
               <Pressable
@@ -53,11 +66,10 @@ export function DesktopHeader({ currentTab, onSelectTab, group }: DesktopHeaderP
                 onPress={() => onSelectTab(t.name)}
                 style={[
                   styles.tabItem,
-                  isActive && { backgroundColor: colors.background, borderColor: colors.border },
+                  isActive && { borderBottomColor: colors.primary },
                   Platform.OS === "web" && ({ cursor: "pointer" } as any),
                 ]}
               >
-                <Text style={{ fontSize: 16 }}>{t.icon}</Text>
                 <Text
                   style={[
                     styles.tabLabel,
@@ -81,7 +93,6 @@ export function DesktopHeader({ currentTab, onSelectTab, group }: DesktopHeaderP
               Platform.OS === "web" && ({ cursor: "pointer" } as any),
             ]}
           >
-            <Text style={{ fontSize: 14 }}>{themeIcon}</Text>
             <Text style={[styles.themeBtnText, { color: colors.textMuted }]}>
               {mode.charAt(0).toUpperCase() + mode.slice(1)}
             </Text>
@@ -113,6 +124,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
   },
+  groupSwitcher: { flexDirection: "row", alignItems: "center", gap: spacing.xs, flexShrink: 1 },
   brandLogo: {
     fontSize: 20,
     fontWeight: "800",
@@ -135,14 +147,10 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   tabItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs + 2,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 4,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: "transparent",
+    paddingVertical: spacing.xs + 6,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
   },
   tabLabel: {
     fontSize: 14,

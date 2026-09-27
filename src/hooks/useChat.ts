@@ -16,7 +16,7 @@ export function useChatMessages(groupId: string | undefined) {
         .order("created_at", { ascending: true })
         .limit(200);
       if (error) throw error;
-      return data;
+      return (data ?? []).filter((message) => message.group_id === groupId);
     },
     enabled: !!groupId,
   });
@@ -33,8 +33,9 @@ export function useChatMessages(groupId: string | undefined) {
         { event: "INSERT", schema: "public", table: "messages", filter: `group_id=eq.${groupId}` },
         (payload) => {
           queryClient.setQueryData<Message[]>(["messages", groupId], (old: Message[] | undefined) => {
-            const next = old ? [...old] : [];
             const incoming = payload.new as Message;
+            if (incoming.group_id !== groupId) return old ?? [];
+            const next = old ? [...old] : [];
             if (next.some((m) => m.id === incoming.id)) return next;
             return [...next, incoming];
           });
