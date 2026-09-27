@@ -56,8 +56,23 @@ function generateInviteCode(): string {
 export function useGroupActions(userId: string | undefined) {
   const queryClient = useQueryClient();
 
+  async function ensureProfile(id: string) {
+    const { data: profile } = await supabase.from("profiles").select("id").eq("id", id).maybeSingle();
+    if (!profile) {
+      const { data: userResp } = await supabase.auth.getUser();
+      const user = userResp?.user;
+      const fallbackUsername =
+        user?.user_metadata?.username ||
+        user?.email?.split("@")[0] ||
+        `user_${id.slice(0, 8)}`;
+      await supabase.from("profiles").upsert({ id, username: fallbackUsername }, { onConflict: "id" });
+    }
+  }
+
   async function createGroup(name: string): Promise<Group> {
     if (!userId) throw new Error("Not signed in");
+    await ensureProfile(userId);
+
     const invite_code = generateInviteCode();
     const { data: group, error } = await supabase
       .from("groups")
@@ -76,6 +91,9 @@ export function useGroupActions(userId: string | undefined) {
   }
 
   async function joinGroup(code: string): Promise<Group> {
+    if (!userId) throw new Error("Not signed in");
+    await ensureProfile(userId);
+
     const { data, error } = await supabase.rpc("join_group_by_code", { code: code.trim().toUpperCase() });
     if (error) throw error;
     queryClient.invalidateQueries({ queryKey: ["my-group", userId] });

@@ -7,6 +7,7 @@ import { Screen, LoadingState, ErrorState, Button, TextField } from "@/component
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { scheduleDailyReminder, cancelDailyReminder } from "@/hooks/useNotifications";
+import { LeetCodeCard } from "@/components/LeetCodeCard";
 
 export function ProfileScreen({ userId }: { userId: string }) {
   const { colors, mode, setMode } = useTheme();
@@ -76,6 +77,11 @@ export function ProfileScreen({ userId }: { userId: string }) {
           <Text style={{ color: colors.textMuted, marginBottom: spacing.sm }}>
             Connected as: {profile.leetcode_username ?? "Not connected"}
           </Text>
+          {profile.leetcode_username ? (
+            <View style={{ marginBottom: spacing.sm }}>
+              <LeetCodeCard username={profile.leetcode_username} />
+            </View>
+          ) : null}
           <TextField
             placeholder="Update LeetCode username"
             autoCapitalize="none"

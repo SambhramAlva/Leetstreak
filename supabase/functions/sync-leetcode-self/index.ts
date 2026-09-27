@@ -1,3 +1,4 @@
+/// <reference types="https://deno.land/x/deno/cli/tsc/dts/lib.deno.ns.d.ts" />
 // Supabase Edge Function: sync-leetcode-self
 //
 // Called directly from the app (Home screen focus / pull-to-refresh) so a user
@@ -10,6 +11,11 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LEETCODE_GQL = "https://leetcode.com/graphql";
@@ -17,36 +23,82 @@ const LEETCODE_GQL = "https://leetcode.com/graphql";
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 async function fetchRecentSolves(username: string) {
-  const query = `
-    query recentAcSubmissions($username: String!, $limit: Int!) {
-      recentAcSubmissionList(username: $username, limit: $limit) { id title titleSlug timestamp }
+  try {
+    const query = `
+      query recentAcSubmissions($username: String!, $limit: Int!) {
+        recentAcSubmissionList(username: $username, limit: $limit) { id title titleSlug timestamp }
+      }
+    `;
+    const res = await fetch(LEETCODE_GQL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+      },
+      body: JSON.stringify({ query, variables: { username, limit: 40 } }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const list = json?.data?.recentAcSubmissionList;
+      if (Array.isArray(list)) return list;
     }
-  `;
-  const res = await fetch(LEETCODE_GQL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, variables: { username, limit: 40 } }),
-  });
-  if (!res.ok) return [];
-  const json = await res.json();
-  return json?.data?.recentAcSubmissionList ?? [];
+  } catch {
+    // Fallback to Alfa API below
+  }
+
+  try {
+    const alfaRes = await fetch(`https://alfa-leetcode-api.onrender.com/recentAc/${username}`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+    });
+    if (alfaRes.ok) {
+      const data = await alfaRes.json();
+      return Array.isArray(data) ? data : data?.recentAcSubmissionList ?? [];
+    }
+  } catch {
+    // ignore
+  }
+
+  return [];
 }
 
 async function fetchTotalSolved(username: string): Promise<number> {
-  const query = `
-    query userProblemsSolved($username: String!) {
-      matchedUser(username: $username) { submitStatsGlobal { acSubmissionNum { difficulty count } } }
+  try {
+    const query = `
+      query userProblemsSolved($username: String!) {
+        matchedUser(username: $username) { submitStatsGlobal { acSubmissionNum { difficulty count } } }
+      }
+    `;
+    const res = await fetch(LEETCODE_GQL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+      },
+      body: JSON.stringify({ query, variables: { username } }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const stats = json?.data?.matchedUser?.submitStatsGlobal?.acSubmissionNum ?? [];
+      const count = stats.find((s: { difficulty: string }) => s.difficulty === "All")?.count;
+      if (typeof count === "number") return count;
     }
-  `;
-  const res = await fetch(LEETCODE_GQL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, variables: { username } }),
-  });
-  if (!res.ok) return 0;
-  const json = await res.json();
-  const stats = json?.data?.matchedUser?.submitStatsGlobal?.acSubmissionNum ?? [];
-  return stats.find((s: { difficulty: string }) => s.difficulty === "All")?.count ?? 0;
+  } catch {
+    // Fallback to Alfa API below
+  }
+
+  try {
+    const alfaRes = await fetch(`https://alfa-leetcode-api.onrender.com/userProfile/${username}`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+    });
+    if (alfaRes.ok) {
+      const data = await alfaRes.json();
+      if (typeof data?.totalSolved === "number") return data.totalSolved;
+    }
+  } catch {
+    // ignore
+  }
+
+  return 0;
 }
 
 function computeStreak(solvedDates: string[]) {
@@ -72,16 +124,24 @@ function computeStreak(solvedDates: string[]) {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return new Response("Missing auth", { status: 401 });
+    if (!authHeader) {
+      return new Response("Missing auth", { status: 401, headers: corsHeaders });
+    }
 
     // Verify the caller's JWT and get their user id.
     const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData.user) return new Response("Invalid session", { status: 401 });
+    if (userErr || !userData.user) {
+      return new Response("Invalid session", { status: 401, headers: corsHeaders });
+    }
     const userId = userData.user.id;
 
     const { data: profile } = await admin
@@ -90,7 +150,10 @@ Deno.serve(async (req) => {
       .eq("id", userId)
       .single();
     if (!profile?.leetcode_username) {
-      return new Response(JSON.stringify({ error: "No LeetCode username connected" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "No LeetCode username connected" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const [recent, total] = await Promise.all([
@@ -146,9 +209,12 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ current_streak: current, longest_streak: longest, total_solved: total }),
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

@@ -1,36 +1,59 @@
-import React from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, Image, Pressable, Platform } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { spacing, radius } from "@/theme/theme";
+import { LeetCodeCard } from "@/components/LeetCodeCard";
 import type { MemberWithStats } from "@/hooks/useGroup";
 
 export function MemberRow({ member }: { member: MemberWithStats }) {
   const { colors } = useTheme();
+  const [expanded, setExpanded] = useState(false);
   const name = member.display_name || member.username;
 
   return (
-    <View style={[styles.row, { borderColor: colors.border }]}>
-      {member.avatar_url ? (
-        <Image source={{ uri: member.avatar_url }} style={styles.avatar} />
-      ) : (
-        <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.border }]}>
-          <Text style={{ color: colors.text, fontWeight: "600" }}>{name.charAt(0).toUpperCase()}</Text>
-        </View>
-      )}
-
-      <View style={styles.info}>
-        <Text style={[styles.name, { color: colors.text }]}>{name}</Text>
-        <Text style={[styles.sub, { color: colors.textMuted }]}>
-          🔥 {member.streak?.current_streak ?? 0} day streak · {member.streak?.total_solved ?? 0} solved
-        </Text>
-      </View>
-
-      <View style={styles.status}>
-        <Text style={{ fontSize: 18 }}>{member.solvedToday ? "✅" : "❌"}</Text>
-        {member.solvedCountToday > 1 && (
-          <Text style={[styles.count, { color: colors.textMuted }]}>{member.solvedCountToday}</Text>
+    <View style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }}>
+      <Pressable
+        onPress={() => member.leetcode_username && setExpanded(!expanded)}
+        style={[
+          styles.row,
+          Platform.OS === "web" && member.leetcode_username && ({ cursor: "pointer" } as any),
+        ]}
+      >
+        {member.avatar_url ? (
+          <Image source={{ uri: member.avatar_url }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.border }]}>
+            <Text style={{ color: colors.text, fontWeight: "600" }}>{name.charAt(0).toUpperCase()}</Text>
+          </View>
         )}
-      </View>
+
+        <View style={styles.info}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={[styles.name, { color: colors.text }]}>{name}</Text>
+            {member.leetcode_username ? (
+              <Text style={{ fontSize: 11, color: colors.primary, fontWeight: "500" }}>
+                {expanded ? "▲ Hide stats" : "▼ Stats"}
+              </Text>
+            ) : null}
+          </View>
+          <Text style={[styles.sub, { color: colors.textMuted }]}>
+            🔥 {member.streak?.current_streak ?? 0} day streak · {member.streak?.total_solved ?? 0} solved
+          </Text>
+        </View>
+
+        <View style={styles.status}>
+          <Text style={{ fontSize: 18 }}>{member.solvedToday ? "✅" : "❌"}</Text>
+          {member.solvedCountToday > 1 && (
+            <Text style={[styles.count, { color: colors.textMuted }]}>{member.solvedCountToday}</Text>
+          )}
+        </View>
+      </Pressable>
+
+      {expanded && member.leetcode_username ? (
+        <View style={{ paddingVertical: spacing.sm, paddingHorizontal: spacing.xs }}>
+          <LeetCodeCard username={member.leetcode_username} />
+        </View>
+      ) : null}
     </View>
   );
 }

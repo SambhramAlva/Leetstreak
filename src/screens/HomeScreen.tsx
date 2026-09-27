@@ -7,10 +7,13 @@ import { StreakCard } from "@/components/StreakCard";
 import { MemberRow } from "@/components/MemberRow";
 import { useMyStreak, useSyncLeetCode } from "@/hooks/useStreak";
 import { useGroupMembers } from "@/hooks/useGroup";
+import { useProfile } from "@/hooks/useProfile";
+import { LeetCodeCard } from "@/components/LeetCodeCard";
 import type { Group } from "@/types/database";
 
 export function HomeScreen({ userId, group }: { userId: string; group: Group }) {
   const { colors } = useTheme();
+  const { data: profile } = useProfile(userId);
   const { data: streak, isLoading: streakLoading } = useMyStreak(userId);
   const {
     data: members,
@@ -72,6 +75,9 @@ export function HomeScreen({ userId, group }: { userId: string; group: Group }) 
               solvedToday={me?.solvedToday ?? false}
               solvedCountToday={me?.solvedCountToday ?? 0}
             />
+            {profile?.leetcode_username ? (
+              <LeetCodeCard username={profile.leetcode_username} />
+            ) : null}
             <Text style={[styles.heading, { color: colors.text }]}>Group progress</Text>
           </View>
         }

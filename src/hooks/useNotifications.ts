@@ -3,13 +3,17 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+if (Platform.OS !== "web") {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 const DAILY_REMINDER_ID = "leetstreak-daily-reminder";
 
@@ -17,6 +21,7 @@ const DAILY_REMINDER_ID = "leetstreak-daily-reminder";
 // notifications are used here on purpose: they fire reliably without any
 // server involvement, so "remind me at 8pm" works even with no connectivity.
 export async function scheduleDailyReminder(hour: number, minute: number) {
+  if (Platform.OS === "web") return;
   await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_ID).catch(() => {});
   await Notifications.scheduleNotificationAsync({
     identifier: DAILY_REMINDER_ID,
@@ -24,11 +29,16 @@ export async function scheduleDailyReminder(hour: number, minute: number) {
       title: "Keep your streak alive 🔥",
       body: "You haven't solved a LeetCode problem today yet.",
     },
-    trigger: { hour, minute, repeats: true },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
+      hour,
+      minute,
+    } as Notifications.NotificationTriggerInput,
   });
 }
 
 export async function cancelDailyReminder() {
+  if (Platform.OS === "web") return;
   await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_ID).catch(() => {});
 }
 
@@ -36,7 +46,7 @@ export async function cancelDailyReminder() {
 // nudges sent from the sync-leetcode Edge Function) and saves the token.
 export function useRegisterPushToken(userId: string | undefined) {
   const register = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || Platform.OS === "web") return;
     const { status: existing } = await Notifications.getPermissionsAsync();
     let finalStatus = existing;
     if (existing !== "granted") {

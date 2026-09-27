@@ -1,3 +1,4 @@
+/// <reference types="https://deno.land/x/deno/cli/tsc/dts/lib.deno.ns.d.ts" />
 // Supabase Edge Function: sync-leetcode
 //
 // Runs on a cron schedule (every ~15 min). For every profile with a
@@ -13,6 +14,11 @@
 // Schedule: Dashboard -> Edge Functions -> sync-leetcode -> Cron -> */15 * * * *
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -30,6 +36,19 @@ type RecentSubmission = {
 };
 
 async function fetchRecentSolves(username: string): Promise<RecentSubmission[]> {
+  try {
+    const alfaRes = await fetch(`https://alfa-leetcode-api.onrender.com/recentAc/${username}`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+    });
+    if (alfaRes.ok) {
+      const data = await alfaRes.json();
+      const list = Array.isArray(data) ? data : data?.recentAcSubmissionList ?? [];
+      if (list.length > 0) return list;
+    }
+  } catch {
+    // Fallback to GraphQL below
+  }
+
   const query = `
     query recentAcSubmissions($username: String!, $limit: Int!) {
       recentAcSubmissionList(username: $username, limit: $limit) {
@@ -42,7 +61,10 @@ async function fetchRecentSolves(username: string): Promise<RecentSubmission[]> 
   `;
   const res = await fetch(LEETCODE_GQL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    },
     body: JSON.stringify({ query, variables: { username, limit: 40 } }),
   });
   if (!res.ok) return [];
@@ -51,6 +73,20 @@ async function fetchRecentSolves(username: string): Promise<RecentSubmission[]> 
 }
 
 async function fetchTotalSolved(username: string): Promise<number> {
+  try {
+    const alfaRes = await fetch(`https://alfa-leetcode-api.onrender.com/userProfile/${username}`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+    });
+    if (alfaRes.ok) {
+      const data = await alfaRes.json();
+      if (typeof data?.totalSolved === "number" && data.totalSolved > 0) {
+        return data.totalSolved;
+      }
+    }
+  } catch {
+    // Fallback to GraphQL below
+  }
+
   const query = `
     query userProblemsSolved($username: String!) {
       matchedUser(username: $username) {
@@ -62,7 +98,10 @@ async function fetchTotalSolved(username: string): Promise<number> {
   `;
   const res = await fetch(LEETCODE_GQL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    },
     body: JSON.stringify({ query, variables: { username } }),
   });
   if (!res.ok) return 0;
@@ -170,9 +209,7 @@ async function syncOneUser(profile: { id: string; leetcode_username: string }) {
 
     const { error: insertErr } = await supabase
       .from("potd_solves")
-      .insert({ potd_id: potd.id, user_id: profile.id })
-      .select()
-      .single();
+      .upsert({ potd_id: potd.id, user_id: profile.id }, { onConflict: "potd_id,user_id" });
     if (insertErr) continue; // already recorded
 
     // Notify groupmates (best-effort; missing EXPO_ACCESS_TOKEN just no-ops).
@@ -194,6 +231,10 @@ async function syncOneUser(profile: { id: string; leetcode_username: string }) {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
     // Optional: restrict to a single user for on-demand-style testing via ?user_id=
     const url = new URL(req.url);
@@ -216,12 +257,12 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ synced: profiles?.length ?? 0 }), {
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
