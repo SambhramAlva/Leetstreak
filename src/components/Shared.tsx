@@ -14,11 +14,17 @@ import {
 import { useTheme } from "@/theme/ThemeProvider";
 import { spacing, radius } from "@/theme/theme";
 
+import { useResponsive } from "@/hooks/useResponsive";
+
 export function Screen({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   const { colors } = useTheme();
+  const { maxContentWidth } = useResponsive();
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.webContainer, style]}>{children}</View>
+      <View style={[styles.webContainer, { maxWidth: maxContentWidth }, style]}>
+        {children}
+      </View>
     </SafeAreaView>
   );
 }

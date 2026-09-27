@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { RootNavigator } from "@/navigation/RootNavigator";
+import { injectWebStyles } from "@/theme/injectWebStyles";
 
 // A single shared QueryClient. Sensible offline-friendly defaults: keep
 // showing cached data on failure, retry quietly in the background rather than
@@ -18,6 +19,10 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  useEffect(() => {
+    injectWebStyles();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

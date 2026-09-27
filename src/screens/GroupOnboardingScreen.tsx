@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
-import { spacing } from "@/theme/theme";
+import { spacing, radius } from "@/theme/theme";
 import { Screen, TextField, Button } from "@/components/Shared";
 import { useGroupActions } from "@/hooks/useGroup";
+import { useResponsive } from "@/hooks/useResponsive";
 
 export function GroupOnboardingScreen({ userId }: { userId: string }) {
   const { colors } = useTheme();
+  const { isMobile } = useResponsive();
   const { createGroup, joinGroup } = useGroupActions(userId);
   const [mode, setMode] = useState<"create" | "join">("create");
   const [name, setName] = useState("");
@@ -35,8 +37,13 @@ export function GroupOnboardingScreen({ userId }: { userId: string }) {
   }
 
   return (
-    <Screen>
-      <View style={styles.container}>
+    <Screen style={!isMobile ? styles.desktopCenter : undefined}>
+      <View
+        style={[
+          styles.container,
+          !isMobile && [styles.desktopCard, { backgroundColor: colors.card, borderColor: colors.border }],
+        ]}
+      >
         <Text style={[styles.title, { color: colors.text }]}>
           {mode === "create" ? "Start a group" : "Join a group"}
         </Text>
@@ -78,6 +85,16 @@ export function GroupOnboardingScreen({ userId }: { userId: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: spacing.lg, gap: spacing.md },
+  desktopCenter: { justifyContent: "center", alignItems: "center" },
+  desktopCard: {
+    flex: 0,
+    width: 480,
+    maxWidth: "90%",
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignSelf: "center",
+  },
   title: { fontSize: 24, fontWeight: "700", textAlign: "center" },
   subtitle: { fontSize: 14, textAlign: "center", marginBottom: spacing.md },
   form: { gap: spacing.sm },

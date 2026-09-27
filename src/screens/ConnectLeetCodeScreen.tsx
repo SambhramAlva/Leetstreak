@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
-import { spacing } from "@/theme/theme";
+import { spacing, radius } from "@/theme/theme";
 import { Screen, TextField, Button } from "@/components/Shared";
 import { useConnectLeetCode } from "@/hooks/useStreak";
+import { useResponsive } from "@/hooks/useResponsive";
 
 export function ConnectLeetCodeScreen({ userId, onDone }: { userId: string; onDone: () => void }) {
   const { colors } = useTheme();
+  const { isMobile } = useResponsive();
   const connect = useConnectLeetCode(userId);
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,8 +28,13 @@ export function ConnectLeetCodeScreen({ userId, onDone }: { userId: string; onDo
   }
 
   return (
-    <Screen>
-      <View style={styles.container}>
+    <Screen style={!isMobile ? styles.desktopCenter : undefined}>
+      <View
+        style={[
+          styles.container,
+          !isMobile && [styles.desktopCard, { backgroundColor: colors.card, borderColor: colors.border }],
+        ]}
+      >
         <Text style={styles.emoji}>🔗</Text>
         <Text style={[styles.title, { color: colors.text }]}>Connect LeetCode</Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
@@ -59,6 +66,16 @@ export function ConnectLeetCodeScreen({ userId, onDone }: { userId: string; onDo
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: spacing.lg, gap: spacing.sm },
+  desktopCenter: { justifyContent: "center", alignItems: "center" },
+  desktopCard: {
+    flex: 0,
+    width: 480,
+    maxWidth: "90%",
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignSelf: "center",
+  },
   emoji: { fontSize: 40, textAlign: "center" },
   title: { fontSize: 22, fontWeight: "700", textAlign: "center" },
   subtitle: { fontSize: 14, textAlign: "center", marginBottom: spacing.md, lineHeight: 20 },

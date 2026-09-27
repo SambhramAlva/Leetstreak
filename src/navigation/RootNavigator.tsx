@@ -17,6 +17,9 @@ import { useProfile } from "@/hooks/useProfile";
 import { useRegisterPushToken } from "@/hooks/useNotifications";
 import type { Group } from "@/types/database";
 
+import { useResponsive } from "@/hooks/useResponsive";
+import { DesktopHeader } from "@/components/DesktopHeader";
+
 const Tab = createBottomTabNavigator();
 
 const TAB_ICONS: Record<string, string> = {
@@ -28,17 +31,26 @@ const TAB_ICONS: Record<string, string> = {
 
 function MainTabs({ userId, group }: { userId: string; group: Group }) {
   const { colors } = useTheme();
+  const { showDesktopNav } = useResponsive();
   useRegisterPushToken(userId);
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
+      screenOptions={({ route, navigation }) => ({
+        headerShown: showDesktopNav,
+        header: () => (
+          <DesktopHeader
+            currentTab={route.name as any}
+            onSelectTab={(tab) => navigation.navigate(tab)}
+            group={group}
+          />
+        ),
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.border,
+          display: showDesktopNav ? "none" : "flex",
           ...(Platform.OS === "web" && {
             maxWidth: 720,
             width: "100%",

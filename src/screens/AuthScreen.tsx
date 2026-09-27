@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
-import { spacing } from "@/theme/theme";
+import { spacing, radius } from "@/theme/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { Screen, TextField, Button } from "@/components/Shared";
+import { useResponsive } from "@/hooks/useResponsive";
 
 export function AuthScreen() {
   const { colors } = useTheme();
+  const { isMobile } = useResponsive();
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [email, setEmail] = useState("");
@@ -33,9 +35,12 @@ export function AuthScreen() {
   }
 
   return (
-    <Screen>
+    <Screen style={!isMobile ? styles.desktopCenter : undefined}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[
+          styles.container,
+          !isMobile && [styles.desktopCard, { backgroundColor: colors.card, borderColor: colors.border }],
+        ]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <Text style={[styles.logo, { color: colors.primary }]}>🔥 LeetStreak</Text>
@@ -88,6 +93,16 @@ export function AuthScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: spacing.lg, gap: spacing.lg },
+  desktopCenter: { justifyContent: "center", alignItems: "center" },
+  desktopCard: {
+    flex: 0,
+    width: 440,
+    maxWidth: "90%",
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignSelf: "center",
+  },
   logo: { fontSize: 32, fontWeight: "800", textAlign: "center" },
   subtitle: { fontSize: 15, textAlign: "center", marginBottom: spacing.md },
   form: { gap: spacing.sm },
