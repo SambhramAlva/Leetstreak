@@ -16,7 +16,8 @@ export function injectWebStyles() {
       padding: 0;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-family: "DMSans_400Regular", sans-serif;
+      font-variant-numeric: tabular-nums;
       background: #f5f5f5;
       color: #262626;
     }

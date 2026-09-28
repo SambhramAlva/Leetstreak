@@ -22,6 +22,12 @@ export const darkColors = {
   tabBar: "#282828",
 };
 
+export const fonts = {
+  body: "DMSans_400Regular",
+  display: "DMSans_400Regular",
+  mono: "DMSans_400Regular",
+};
+
 export type ThemeColors = typeof lightColors;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };

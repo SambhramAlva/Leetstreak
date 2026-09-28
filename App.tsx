@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
+import { useFonts } from "@expo-google-fonts/dm-sans";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { RootNavigator } from "@/navigation/RootNavigator";
@@ -19,9 +20,15 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    DMSans_400Regular: require("@expo-google-fonts/dm-sans/400Regular/DMSans_400Regular.ttf"),
+  });
+
   useEffect(() => {
     injectWebStyles();
   }, []);
+
+  if (!fontsLoaded) return null;
 
   return (
     <QueryClientProvider client={queryClient}>

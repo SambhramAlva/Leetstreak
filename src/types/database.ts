@@ -68,4 +68,28 @@ export type LeetcodeSolve = {
   synced_at: string;
 };
 
+export type AppAdmin = {
+  user_id: string;
+  granted_by: string | null;
+  created_at: string;
+};
+
+export type AppSetting = {
+  key: string;
+  value: Record<string, unknown>;
+  description: string | null;
+  updated_by: string | null;
+  updated_at: string;
+};
+
+export type AdminAuditLog = {
+  id: string;
+  actor_id: string;
+  action: string;
+  table_name: string | null;
+  record_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 

@@ -1,152 +1,41 @@
-import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, Platform } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { radius, spacing } from "@/theme/theme";
 import { ErrorState, LoadingState, Screen } from "@/components/Shared";
-import { useGroupMembers } from "@/hooks/useGroup";
-import type { Group } from "@/types/database";
+import { useAdminActions, useAdminDashboard } from "@/hooks/useAdmin";
 
-export function AdminDashboardScreen({ group }: { group: Group }) {
+type Section = "Overview" | "Users" | "Groups" | "Settings" | "Activity";
+const sections: Section[] = ["Overview", "Users", "Groups", "Settings", "Activity"];
+
+export function AdminDashboardScreen() {
   const { colors } = useTheme();
-  const { data: members, isLoading, isError, refetch, isFetching } = useGroupMembers(group.id);
+  const [section, setSection] = useState<Section>("Overview");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const { data, isLoading, isError, refetch, isFetching } = useAdminDashboard(true);
+  const { deleteRecord, setAdmin, saveSetting } = useAdminActions();
+  const profiles = useMemo(() => (data?.profiles ?? []).filter((p) => `${p.username} ${p.display_name ?? ""}`.toLowerCase().includes(search.toLowerCase())), [data?.profiles, search]);
+  const groups = useMemo(() => (data?.groups ?? []).filter((g) => `${g.name} ${g.invite_code}`.toLowerCase().includes(search.toLowerCase())), [data?.groups, search]);
+  const pageSize = 8;
+  const admins = new Set((data?.admins ?? []).map((admin) => admin.user_id));
+  const askDelete = (table: "profiles" | "groups", id: string, label: string) => Alert.alert("Delete record?", `Permanently remove ${label} and related records?`, [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: () => deleteRecord(table, id).catch((error) => Alert.alert("Delete failed", error.message)) }]);
 
-  if (isLoading) {
-    return <Screen><LoadingState label="Loading dashboard..." /></Screen>;
-  }
+  if (isLoading) return <Screen><LoadingState label="Loading control center..." /></Screen>;
+  if (isError || !data) return <Screen><ErrorState message="Couldn't load the admin control center." onRetry={refetch} /></Screen>;
 
-  if (isError || !members) {
-    return <Screen><ErrorState message="Couldn't load the admin dashboard." onRetry={refetch} /></Screen>;
-  }
-
-  const activeToday = members.filter((member) => member.solvedToday).length;
-  const totalSolved = members.reduce((total, member) => total + (member.streak?.total_solved ?? 0), 0);
-  const averageStreak = members.length
-    ? Math.round(members.reduce((total, member) => total + (member.streak?.current_streak ?? 0), 0) / members.length)
-    : 0;
-  const connected = members.filter((member) => member.leetcode_username).length;
-  const sortedMembers = [...members].sort(
-    (a, b) => (b.streak?.current_streak ?? 0) - (a.streak?.current_streak ?? 0),
-  );
-
-  return (
-    <Screen>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={[styles.eyebrow, { color: colors.primary }]}>GROUP ADMIN</Text>
-            <Text style={[styles.title, { color: colors.text }]}>Command center</Text>
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>{group.name} · invite {group.invite_code}</Text>
-          </View>
-          <Pressable
-            onPress={() => refetch()}
-            style={[styles.refreshButton, { borderColor: colors.border, backgroundColor: colors.surface }, Platform.OS === "web" && ({ cursor: "pointer" } as any)]}
-          >
-            <Text style={{ color: colors.text, fontWeight: "700" }}>{isFetching ? "Refreshing..." : "Refresh"}</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.statsGrid}>
-          <Metric label="Members" value={members.length} detail={`${connected} connected`} colors={colors} />
-          <Metric label="Active today" value={activeToday} detail={`${members.length ? Math.round((activeToday / members.length) * 100) : 0}% participation`} colors={colors} />
-          <Metric label="Problems solved" value={totalSolved} detail="Across this group" colors={colors} />
-          <Metric label="Avg. streak" value={`${averageStreak}d`} detail="Current member average" colors={colors} />
-        </View>
-
-        <View style={styles.columns}>
-          <View style={[styles.panel, styles.rosterPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.panelHeader}>
-              <View>
-                <Text style={[styles.panelTitle, { color: colors.text }]}>Member health</Text>
-                <Text style={[styles.panelHint, { color: colors.textMuted }]}>Sorted by current streak</Text>
-              </View>
-              <Text style={[styles.panelAction, { color: colors.primary }]}>{activeToday}/{members.length} today</Text>
-            </View>
-            {sortedMembers.map((member) => {
-              const name = member.display_name || member.username;
-              return (
-                <View key={member.id} style={[styles.memberRow, { borderTopColor: colors.border }]}>
-                  <View style={[styles.avatar, { backgroundColor: member.solvedToday ? colors.primary : colors.border }]}>
-                    <Text style={{ color: member.solvedToday ? "#fff" : colors.text, fontWeight: "800" }}>{name.charAt(0).toUpperCase()}</Text>
-                  </View>
-                  <View style={styles.memberInfo}>
-                    <Text style={[styles.memberName, { color: colors.text }]}>{name}</Text>
-                    <Text style={[styles.memberMeta, { color: colors.textMuted }]}>{member.leetcode_username ? `@${member.leetcode_username}` : "LeetCode not connected"}</Text>
-                  </View>
-                  <View style={styles.memberStats}>
-                    <Text style={[styles.streak, { color: colors.text }]}>🔥 {member.streak?.current_streak ?? 0}</Text>
-                    <Text style={[styles.memberMeta, { color: member.solvedToday ? colors.primary : colors.textMuted }]}>{member.solvedToday ? "Active" : "Needs a solve"}</Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-
-          <View style={styles.sideColumn}>
-            <View style={[styles.panel, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              <Text style={styles.inviteEyebrow}>GROW THE GROUP</Text>
-              <Text style={styles.inviteTitle}>Bring in your next solver</Text>
-              <Text style={styles.inviteCopy}>Share this invite code with teammates ready to build a streak.</Text>
-              <View style={styles.codeBox}><Text style={[styles.code, { color: colors.text }]}>{group.invite_code}</Text></View>
-            </View>
-            <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.panelTitle, { color: colors.text }]}>Admin checklist</Text>
-              <ChecklistItem text="Keep the daily streak visible" done={activeToday > 0} colors={colors} />
-              <ChecklistItem text="Connect every member to LeetCode" done={connected === members.length && members.length > 0} colors={colors} />
-              <ChecklistItem text="Celebrate a new personal best" done={members.some((member) => (member.streak?.longest_streak ?? 0) >= 7)} colors={colors} />
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </Screen>
-  );
+  return <Screen><ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.heading}><View style={{ flex: 1 }}><Text style={[styles.eyebrow, { color: colors.primary }]}>LEETSTREAK / ADMIN</Text><Text style={[styles.title, { color: colors.text }]}>Control center</Text><Text style={[styles.subtitle, { color: colors.textMuted }]}>Application operations, access, data, and audit history.</Text></View><Pressable onPress={() => refetch()} style={[styles.refresh, { borderColor: colors.border, backgroundColor: colors.card }, Platform.OS === "web" && ({ cursor: "pointer" } as any)]}><Text style={{ color: colors.text, fontWeight: "800" }}>{isFetching ? "Refreshing" : "Refresh data"}</Text></Pressable></View>
+    <View style={styles.layout}><View style={[styles.sidebar, { backgroundColor: colors.card, borderColor: colors.border }]}><Text style={[styles.sideLabel, { color: colors.textMuted }]}>WORKSPACE</Text>{sections.map((item) => <Pressable key={item} onPress={() => { setSection(item); setSearch(""); setPage(0); }} style={[styles.navItem, section === item && { backgroundColor: colors.primary }]}><Text style={[styles.navText, { color: section === item ? "#fff" : colors.text }]}>{item}</Text>{item === "Activity" && <Text style={{ color: section === item ? "#fff" : colors.textMuted }}>{data.audit.length}</Text>}</Pressable>)}<View style={[styles.security, { borderTopColor: colors.border }]}><Text style={{ color: colors.primary, fontWeight: "900" }}>SECURE MODE</Text><Text style={[styles.note, { color: colors.textMuted }]}>Writes are checked by RLS and recorded in the audit trail.</Text></View></View>
+      <View style={styles.main}>{section === "Overview" && <Overview data={data} colors={colors} />}{section === "Users" && <><Toolbar title="User directory" count={profiles.length} value={search} onChange={(value: string) => { setSearch(value); setPage(0); }} colors={colors} /><Table labels={["User", "LeetCode", "Joined", "Access", ""]} colors={colors}>{profiles.slice(page * pageSize, (page + 1) * pageSize).map((profile) => <View key={profile.id} style={[styles.row, { borderTopColor: colors.border }]}><View style={styles.user}><View style={[styles.avatar, { backgroundColor: colors.primary }]}><Text style={{ color: "#fff", fontWeight: "900" }}>{profile.username[0]?.toUpperCase()}</Text></View><View><Text style={[styles.strong, { color: colors.text }]}>{profile.display_name || profile.username}</Text><Text style={[styles.muted, { color: colors.textMuted }]}>{profile.username}</Text></View></View><Text style={[styles.cell, { color: colors.textMuted }]}>{profile.leetcode_username ? `@${profile.leetcode_username}` : "Not connected"}</Text><Text style={[styles.cell, { color: colors.textMuted }]}>{new Date(profile.created_at).toLocaleDateString()}</Text><Pressable onPress={() => setAdmin(profile.id, !admins.has(profile.id))}><Text style={{ color: admins.has(profile.id) ? colors.primary : colors.textMuted, fontWeight: "800" }}>{admins.has(profile.id) ? "Admin" : "Member"}</Text></Pressable><Pressable onPress={() => askDelete("profiles", profile.id, profile.username)}><Text style={{ color: colors.danger, fontWeight: "800" }}>Delete</Text></Pressable></View>)}<Pager page={page} next={(page + 1) * pageSize < profiles.length} onChange={setPage} colors={colors} /></Table></>}{section === "Groups" && <><Toolbar title="Group registry" count={groups.length} value={search} onChange={(value: string) => { setSearch(value); setPage(0); }} colors={colors} /><Table labels={["Group", "Invite", "Created", "Owner", ""]} colors={colors}>{groups.slice(page * pageSize, (page + 1) * pageSize).map((group) => <View key={group.id} style={[styles.row, { borderTopColor: colors.border }]}><View style={{ flex: 1 }}><Text style={[styles.strong, { color: colors.text }]}>{group.name}</Text><Text style={[styles.muted, { color: colors.textMuted }]}>{group.id.slice(0, 8)}...</Text></View><Text style={[styles.cell, { color: colors.primary, fontWeight: "800" }]}>{group.invite_code}</Text><Text style={[styles.cell, { color: colors.textMuted }]}>{new Date(group.created_at).toLocaleDateString()}</Text><Text style={[styles.cell, { color: colors.textMuted }]}>{group.created_by.slice(0, 8)}...</Text><Pressable onPress={() => askDelete("groups", group.id, group.name)}><Text style={{ color: colors.danger, fontWeight: "800" }}>Delete</Text></Pressable></View>)}<Pager page={page} next={(page + 1) * pageSize < groups.length} onChange={setPage} colors={colors} /></Table></>}{section === "Settings" && <Settings settings={data.settings} colors={colors} onSave={saveSetting} />}{section === "Activity" && <Activity logs={data.audit} colors={colors} />}</View></View>
+  </ScrollView></Screen>;
 }
 
-function Metric({ label, value, detail, colors }: { label: string; value: string | number; detail: string; colors: any }) {
-  return (
-    <View style={[styles.metric, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
-      <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[styles.metricDetail, { color: colors.primary }]}>{detail}</Text>
-    </View>
-  );
-}
+function Overview({ data, colors }: any) { return <><View style={styles.metrics}>{[["Users", data.profiles.length], ["Groups", data.groups.length], ["Admins", data.admins.length], ["Audit events", data.audit.length]].map(([label, value]) => <View key={label} style={[styles.metric, { backgroundColor: colors.card, borderColor: colors.border }]}><Text style={[styles.muted, { color: colors.textMuted }]}>{label}</Text><Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text><Text style={{ color: colors.primary, fontSize: 12, fontWeight: "700" }}>Live records</Text></View>)}</View><View style={styles.panels}><View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}><Text style={[styles.panelTitle, { color: colors.text }]}>Operational readiness</Text>{[["Role-based access enabled", data.admins.length > 0], ["Audit trail available", data.audit.length > 0], ["Global settings configured", data.settings.length > 0]].map(([label, done]) => <View key={label as string} style={styles.check}><Text style={{ color: done ? colors.primary : colors.textMuted, fontWeight: "900" }}>{done ? "OK" : "--"}</Text><Text style={{ color: colors.text }}>{label as string}</Text></View>)}</View><View style={[styles.panel, { backgroundColor: colors.text, borderColor: colors.text }]}><Text style={{ color: colors.primary, fontWeight: "900" }}>ADMIN BRIEF</Text><Text style={styles.briefTitle}>Keep the system legible.</Text><Text style={styles.briefCopy}>Use the directory for access changes, the registry for group lifecycle, and Activity to investigate privileged writes.</Text></View></View></>; }
+function Toolbar({ title, count, value, onChange, colors }: any) { return <View style={styles.toolbar}><View><Text style={[styles.panelTitle, { color: colors.text }]}>{title}</Text><Text style={[styles.muted, { color: colors.textMuted }]}>{count} records</Text></View><TextInput value={value} onChangeText={onChange} placeholder="Search records..." placeholderTextColor={colors.textMuted} style={[styles.search, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]} /></View>; }
+function Table({ labels, colors, children }: any) { return <View style={[styles.table, { backgroundColor: colors.card, borderColor: colors.border }]}><View style={styles.tableHead}>{labels.map((label: string) => <Text key={label} style={[styles.head, { color: colors.textMuted }]}>{label}</Text>)}</View>{children}</View>; }
+function Pager({ page, next, onChange, colors }: any) { return <View style={styles.pager}><Text style={{ color: colors.textMuted }}>Page {page + 1}</Text><View style={{ flexDirection: "row", gap: spacing.md }}><Pressable disabled={!page} onPress={() => onChange(page - 1)}><Text style={{ color: page ? colors.primary : colors.border, fontWeight: "800" }}>Previous</Text></Pressable><Pressable disabled={!next} onPress={() => onChange(page + 1)}><Text style={{ color: next ? colors.primary : colors.border, fontWeight: "800" }}>Next</Text></Pressable></View></View>; }
+function Settings({ settings, colors, onSave }: any) { const [key, setKey] = useState(""); const [value, setValue] = useState(""); return <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}><Text style={[styles.panelTitle, { color: colors.text }]}>Application settings</Text><Text style={[styles.muted, { color: colors.textMuted }]}>Persisted configuration managed through the admin policy.</Text>{settings.map((setting: any) => <View key={setting.key} style={[styles.setting, { borderTopColor: colors.border }]}><Text style={[styles.strong, { color: colors.text }]}>{setting.key}</Text><Text style={[styles.cell, { color: colors.textMuted }]}>{JSON.stringify(setting.value)}</Text></View>)}<TextInput value={key} onChangeText={setKey} placeholder="Setting key" placeholderTextColor={colors.textMuted} style={[styles.input, { color: colors.text, borderColor: colors.border }]} /><TextInput value={value} onChangeText={setValue} placeholder='JSON value, e.g. {"enabled":true}' placeholderTextColor={colors.textMuted} style={[styles.input, { color: colors.text, borderColor: colors.border }]} /><Pressable onPress={() => { try { onSave({ key, value: JSON.parse(value), description: null }); setKey(""); setValue(""); } catch { Alert.alert("Invalid JSON", "Enter a valid JSON value."); } }} style={[styles.button, { backgroundColor: colors.primary }]}><Text style={{ color: "#fff", fontWeight: "800" }}>Save setting</Text></Pressable></View>; }
+function Activity({ logs, colors }: any) { return <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}><Text style={[styles.panelTitle, { color: colors.text }]}>Audit activity</Text>{logs.map((log: any) => <View key={log.id} style={[styles.activity, { borderTopColor: colors.border }]}><Text style={[styles.strong, { color: colors.text }]}>{log.action} {log.table_name ? `· ${log.table_name}` : ""}</Text><Text style={[styles.muted, { color: colors.textMuted }]}>{new Date(log.created_at).toLocaleString()} · {log.actor_id.slice(0, 8)}...</Text></View>)}</View>; }
 
-function ChecklistItem({ text, done, colors }: { text: string; done: boolean; colors: any }) {
-  return <View style={styles.checkItem}><Text style={{ color: done ? colors.primary : colors.textMuted, fontSize: 16 }}>{done ? "✓" : "○"}</Text><Text style={[styles.checkText, { color: colors.text }]}>{text}</Text></View>;
-}
-
-const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xl },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: spacing.md },
-  eyebrow: { fontSize: 11, fontWeight: "800", letterSpacing: 1.5, marginBottom: spacing.xs },
-  title: { fontSize: 30, fontWeight: "800" },
-  subtitle: { fontSize: 13, marginTop: spacing.xs },
-  refreshButton: { borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  metric: { flex: 1, minWidth: 150, borderWidth: 1, borderRadius: radius.md, padding: spacing.md, gap: spacing.xs },
-  metricLabel: { fontSize: 12, fontWeight: "600" },
-  metricValue: { fontSize: 27, fontWeight: "800" },
-  metricDetail: { fontSize: 12, fontWeight: "700" },
-  columns: { flexDirection: "row", alignItems: "flex-start", gap: spacing.lg },
-  rosterPanel: { flex: 1.5 },
-  sideColumn: { flex: 1, gap: spacing.lg },
-  panel: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.lg },
-  panelHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.sm },
-  panelTitle: { fontSize: 17, fontWeight: "800" },
-  panelHint: { fontSize: 12, marginTop: 3 },
-  panelAction: { fontSize: 12, fontWeight: "800" },
-  memberRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: spacing.sm + 2 },
-  avatar: { width: 36, height: 36, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
-  memberInfo: { flex: 1 },
-  memberName: { fontSize: 14, fontWeight: "700" },
-  memberMeta: { fontSize: 11, marginTop: 2 },
-  memberStats: { alignItems: "flex-end" },
-  streak: { fontSize: 14, fontWeight: "800" },
-  inviteEyebrow: { color: "rgba(255,255,255,0.75)", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 },
-  inviteTitle: { color: "#fff", fontSize: 21, fontWeight: "800", marginTop: spacing.sm },
-  inviteCopy: { color: "rgba(255,255,255,0.86)", lineHeight: 19, marginTop: spacing.sm },
-  codeBox: { backgroundColor: "rgba(255,255,255,0.92)", borderRadius: radius.sm, padding: spacing.sm, alignItems: "center", marginTop: spacing.md },
-  code: { fontSize: 20, fontWeight: "900", letterSpacing: 2 },
-  checkItem: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.md },
-  checkText: { flex: 1, fontSize: 13, lineHeight: 18 },
-});
+const styles = StyleSheet.create({ content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xl }, heading: { flexDirection: "row", gap: spacing.md }, eyebrow: { fontSize: 11, fontWeight: "900", letterSpacing: 1.5 }, title: { fontSize: 32, fontWeight: "900", marginTop: spacing.xs }, subtitle: { fontSize: 13, marginTop: spacing.xs }, refresh: { padding: spacing.sm, borderWidth: 1, borderRadius: radius.md }, layout: { flexDirection: "row", alignItems: "flex-start", gap: spacing.lg }, sidebar: { width: 190, borderWidth: 1, borderRadius: radius.lg, padding: spacing.sm }, sideLabel: { fontSize: 10, fontWeight: "900", padding: spacing.sm }, navItem: { flexDirection: "row", justifyContent: "space-between", padding: spacing.sm, borderRadius: radius.sm }, navText: { fontSize: 13, fontWeight: "800" }, security: { borderTopWidth: 1, marginTop: spacing.md, padding: spacing.sm, gap: spacing.xs }, note: { fontSize: 11, lineHeight: 16 }, main: { flex: 1, gap: spacing.md }, metrics: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md }, metric: { flex: 1, minWidth: 140, borderWidth: 1, borderRadius: radius.md, padding: spacing.md, gap: spacing.xs }, metricValue: { fontSize: 28, fontWeight: "900" }, panels: { flexDirection: "row", gap: spacing.md }, panel: { flex: 1, borderWidth: 1, borderRadius: radius.lg, padding: spacing.lg }, panelTitle: { fontSize: 17, fontWeight: "900" }, check: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md }, briefTitle: { color: "#fff", fontSize: 22, fontWeight: "900", marginTop: spacing.md }, briefCopy: { color: "rgba(255,255,255,0.72)", lineHeight: 19, marginTop: spacing.sm }, toolbar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.md }, search: { borderWidth: 1, borderRadius: radius.md, padding: spacing.sm, minWidth: 220 }, table: { borderWidth: 1, borderRadius: radius.lg, overflow: "hidden" }, tableHead: { flexDirection: "row", padding: spacing.md, gap: spacing.sm }, head: { flex: 1, fontSize: 10, fontWeight: "900" }, row: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, minHeight: 62 }, user: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm }, avatar: { width: 32, height: 32, borderRadius: radius.full, alignItems: "center", justifyContent: "center" }, cell: { flex: 1, fontSize: 12 }, strong: { fontSize: 13, fontWeight: "800" }, muted: { fontSize: 11, marginTop: 2 }, pager: { flexDirection: "row", justifyContent: "space-between", padding: spacing.md }, setting: { flexDirection: "row", justifyContent: "space-between", paddingVertical: spacing.md, borderTopWidth: StyleSheet.hairlineWidth }, input: { borderWidth: 1, borderRadius: radius.md, padding: spacing.sm, marginTop: spacing.sm }, button: { alignSelf: "flex-start", borderRadius: radius.md, padding: spacing.sm, marginTop: spacing.md }, activity: { paddingVertical: spacing.md, borderTopWidth: StyleSheet.hairlineWidth } });

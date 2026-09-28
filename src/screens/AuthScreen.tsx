@@ -5,6 +5,8 @@ import { spacing, radius } from "@/theme/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { Screen, TextField, Button } from "@/components/Shared";
 import { useResponsive } from "@/hooks/useResponsive";
+import { AppIcon } from "@/components/AppIcon";
+import { fonts } from "@/theme/theme";
 
 export function AuthScreen() {
   const { colors } = useTheme();
@@ -43,7 +45,7 @@ export function AuthScreen() {
         ]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Text style={[styles.logo, { color: colors.primary }]}>🔥 LeetStreak</Text>
+        <View style={styles.brand}><AppIcon name="flame" size={25} color={colors.primary} strokeWidth={2.5} /><Text style={[styles.logo, { color: colors.primary }]}>LeetStreak</Text></View>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           {mode === "signIn" ? "Welcome back" : "Create your account"}
         </Text>
@@ -103,7 +105,8 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     alignSelf: "center",
   },
-  logo: { fontSize: 32, fontWeight: "800", textAlign: "center" },
+  brand: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm },
+  logo: { fontSize: 32, fontWeight: "800", fontFamily: fonts.display, textAlign: "center" },
   subtitle: { fontSize: 15, textAlign: "center", marginBottom: spacing.md },
   form: { gap: spacing.sm },
 });

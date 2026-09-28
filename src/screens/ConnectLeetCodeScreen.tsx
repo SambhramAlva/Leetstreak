@@ -5,6 +5,7 @@ import { spacing, radius } from "@/theme/theme";
 import { Screen, TextField, Button } from "@/components/Shared";
 import { useConnectLeetCode } from "@/hooks/useStreak";
 import { useResponsive } from "@/hooks/useResponsive";
+import { AppIcon } from "@/components/AppIcon";
 
 export function ConnectLeetCodeScreen({ userId, onDone }: { userId: string; onDone: () => void }) {
   const { colors } = useTheme();
@@ -35,7 +36,7 @@ export function ConnectLeetCodeScreen({ userId, onDone }: { userId: string; onDo
           !isMobile && [styles.desktopCard, { backgroundColor: colors.card, borderColor: colors.border }],
         ]}
       >
-        <Text style={styles.emoji}>🔗</Text>
+        <View style={styles.icon}><AppIcon name="link" size={34} color={colors.primary} strokeWidth={2} /></View>
         <Text style={[styles.title, { color: colors.text }]}>Connect LeetCode</Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           Enter your LeetCode username. We only read your public submissions —
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     alignSelf: "center",
   },
-  emoji: { fontSize: 40, textAlign: "center" },
+  icon: { alignItems: "center", justifyContent: "center", marginBottom: spacing.xs },
   title: { fontSize: 22, fontWeight: "700", textAlign: "center" },
   subtitle: { fontSize: 14, textAlign: "center", marginBottom: spacing.md, lineHeight: 20 },
   form: { gap: spacing.sm },

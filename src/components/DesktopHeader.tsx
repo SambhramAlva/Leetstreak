@@ -1,8 +1,9 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
-import { spacing, radius } from "@/theme/theme";
+import { spacing, radius, fonts } from "@/theme/theme";
 import type { Group } from "@/types/database";
+import { AppIcon, AppIconName } from "@/components/AppIcon";
 
 type TabName = "Home" | "Group" | "Chat" | "Profile" | "Admin";
 
@@ -22,6 +23,8 @@ const TABS: { name: TabName; label: string }[] = [
   { name: "Profile", label: "Profile" },
   { name: "Admin", label: "Admin" },
 ];
+
+const TAB_ICONS: Record<TabName, AppIconName> = { Home: "home", Group: "group", Chat: "chat", Profile: "profile", Admin: "admin" };
 
 export function DesktopHeader({ currentTab, onSelectTab, group, groups = [], onSelectGroup, isAdmin = false }: DesktopHeaderProps) {
   const { colors, mode, setMode } = useTheme();
@@ -70,6 +73,7 @@ export function DesktopHeader({ currentTab, onSelectTab, group, groups = [], onS
                   Platform.OS === "web" && ({ cursor: "pointer" } as any),
                 ]}
               >
+                <AppIcon name={TAB_ICONS[t.name]} size={15} color={isActive ? colors.primary : colors.textMuted} />
                 <Text
                   style={[
                     styles.tabLabel,
@@ -93,6 +97,7 @@ export function DesktopHeader({ currentTab, onSelectTab, group, groups = [], onS
               Platform.OS === "web" && ({ cursor: "pointer" } as any),
             ]}
           >
+            <AppIcon name="settings" size={15} color={colors.textMuted} />
             <Text style={[styles.themeBtnText, { color: colors.textMuted }]}>
               {mode.charAt(0).toUpperCase() + mode.slice(1)}
             </Text>
@@ -128,7 +133,7 @@ const styles = StyleSheet.create({
   brandLogo: {
     fontSize: 20,
     fontWeight: "800",
-    letterSpacing: -0.5,
+    fontFamily: fonts.display,
   },
   groupBadge: {
     paddingHorizontal: spacing.sm + 2,
@@ -147,6 +152,9 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   tabItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 6,
     borderBottomWidth: 2,
@@ -154,6 +162,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 14,
+    fontFamily: fonts.body,
   },
   rightActions: {
     flexDirection: "row",

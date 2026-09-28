@@ -26,7 +26,7 @@ export async function scheduleDailyReminder(hour: number, minute: number) {
   await Notifications.scheduleNotificationAsync({
     identifier: DAILY_REMINDER_ID,
     content: {
-      title: "Keep your streak alive 🔥",
+      title: "Keep your streak alive",
       body: "You haven't solved a LeetCode problem today yet.",
     },
     trigger: {

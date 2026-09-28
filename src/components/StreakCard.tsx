@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { spacing, radius } from "@/theme/theme";
 import type { Streak } from "@/types/database";
+import { AppIcon } from "@/components/AppIcon";
 
 export function StreakCard({
   streak,
@@ -43,7 +44,7 @@ export function StreakCard({
           },
         ]}
       >
-        <Text style={{ fontSize: 18 }}>{solvedToday ? "✅" : "❌"}</Text>
+        <AppIcon name={solvedToday ? "check" : "close"} size={18} color={solvedToday ? colors.primary : colors.danger} strokeWidth={2.5} />
         <Text style={[styles.todayText, { color: solvedToday ? colors.primary : colors.danger }]}>
           {solvedToday
             ? `Solved today${solvedCountToday > 1 ? ` · ${solvedCountToday} problems` : ""}`

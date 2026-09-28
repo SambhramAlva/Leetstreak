@@ -4,6 +4,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { spacing, radius } from "@/theme/theme";
 import { LeetCodeCard } from "@/components/LeetCodeCard";
 import type { MemberWithStats } from "@/hooks/useGroup";
+import { AppIcon } from "@/components/AppIcon";
 
 export function MemberRow({ member }: { member: MemberWithStats }) {
   const { colors } = useTheme();
@@ -36,13 +37,11 @@ export function MemberRow({ member }: { member: MemberWithStats }) {
               </Text>
             ) : null}
           </View>
-          <Text style={[styles.sub, { color: colors.textMuted }]}>
-            🔥 {member.streak?.current_streak ?? 0} day streak · {member.streak?.total_solved ?? 0} solved
-          </Text>
+          <View style={styles.subRow}><AppIcon name="flame" size={13} color={colors.primary} /><Text style={[styles.sub, { color: colors.textMuted }]}>{member.streak?.current_streak ?? 0} day streak · {member.streak?.total_solved ?? 0} solved</Text></View>
         </View>
 
         <View style={styles.status}>
-          <Text style={{ fontSize: 18 }}>{member.solvedToday ? "✅" : "❌"}</Text>
+          <AppIcon name={member.solvedToday ? "check" : "close"} size={18} color={member.solvedToday ? colors.primary : colors.danger} strokeWidth={2.5} />
           {member.solvedCountToday > 1 && (
             <Text style={[styles.count, { color: colors.textMuted }]}>{member.solvedCountToday}</Text>
           )}
@@ -71,6 +70,7 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   name: { fontSize: 15, fontWeight: "600" },
   sub: { fontSize: 12, marginTop: 2 },
+  subRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   status: { alignItems: "center" },
   count: { fontSize: 11, marginTop: 2 },
 });

@@ -22,6 +22,34 @@ create table if not exists profiles (
   created_at        timestamptz not null default now()
 );
 
+-- Application administrators are separate from group ownership. Populate this
+-- table through a trusted migration or the Supabase SQL editor.
+create table if not exists app_admins (
+  user_id    uuid primary key references profiles(id) on delete cascade,
+  granted_by uuid references profiles(id),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists app_settings (
+  key         text primary key,
+  value       jsonb not null default '{}'::jsonb,
+  description text,
+  updated_by  uuid references profiles(id),
+  updated_at  timestamptz not null default now()
+);
+
+create table if not exists admin_audit_logs (
+  id         uuid primary key default gen_random_uuid(),
+  actor_id   uuid not null references profiles(id),
+  action     text not null,
+  table_name text,
+  record_id  text,
+  metadata   jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_admin_audit_created on admin_audit_logs(created_at desc);
+
 -- Trigger to automatically create a profile row whenever a new user signs up in auth.users
 create or replace function public.handle_new_user()
 returns trigger
@@ -151,6 +179,54 @@ alter table problem_of_the_day enable row level security;
 alter table potd_solves enable row level security;
 alter table messages enable row level security;
 alter table push_tokens enable row level security;
+alter table app_admins enable row level security;
+alter table app_settings enable row level security;
+alter table admin_audit_logs enable row level security;
+
+create or replace function is_app_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (select 1 from app_admins where user_id = auth.uid());
+$$;
+
+create or replace function admin_audit(
+  action_name text,
+  affected_table text default null,
+  affected_record text default null,
+  details jsonb default '{}'::jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_app_admin() then raise exception 'Administrator access required'; end if;
+  insert into admin_audit_logs(actor_id, action, table_name, record_id, metadata)
+  values (auth.uid(), action_name, affected_table, affected_record, details);
+end;
+$$;
+
+-- Admin access is still mediated by RLS. The anon key can never bypass this
+-- predicate, and service-role credentials are never shipped to the client.
+create policy "admins: manage app admins" on app_admins for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: manage settings" on app_settings for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: read audit logs" on admin_audit_logs for select using (is_app_admin());
+create policy "admins: insert audit logs" on admin_audit_logs for insert with check (is_app_admin() and actor_id = auth.uid());
+
+create policy "admins: manage profiles" on profiles for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: manage groups" on groups for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: manage members" on group_members for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: manage solves" on leetcode_solves for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: manage streaks" on streaks for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: manage potd" on problem_of_the_day for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: manage potd solves" on potd_solves for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: manage messages" on messages for all using (is_app_admin()) with check (is_app_admin());
+create policy "admins: manage push tokens" on push_tokens for all using (is_app_admin()) with check (is_app_admin());
 
 -- helper: is the current user a member of a given group?
 create or replace function is_group_member(gid uuid)

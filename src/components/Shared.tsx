@@ -12,7 +12,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
-import { spacing, radius } from "@/theme/theme";
+import { spacing, radius, fonts } from "@/theme/theme";
 
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -148,6 +148,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
     fontSize: 15,
+    fontFamily: fonts.body,
   },
   banner: {
     paddingVertical: spacing.xs + 2,

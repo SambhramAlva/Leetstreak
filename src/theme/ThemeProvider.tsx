@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
-import { useColorScheme } from "react-native";
-import { darkColors, lightColors, ThemeColors } from "./theme";
+import { Text, useColorScheme } from "react-native";
+import { darkColors, fonts, lightColors, ThemeColors } from "./theme";
 
 type ThemeMode = "light" | "dark" | "system";
 
@@ -21,6 +21,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const colors = isDark ? darkColors : lightColors;
 
   const value = useMemo(() => ({ colors, isDark, mode, setMode }), [colors, isDark, mode]);
+
+  (Text as any).defaultProps = {
+    ...(Text as any).defaultProps,
+    style: [{ fontFamily: fonts.body }, (Text as any).defaultProps?.style],
+  };
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
