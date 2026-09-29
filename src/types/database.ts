@@ -20,6 +20,11 @@ export type Group = {
   invite_code: string;
   created_by: string;
   created_at: string;
+  member_count?: number;
+};
+
+export type DiscoverableGroup = Pick<Group, "id" | "name" | "created_at"> & {
+  member_count: number;
 };
 
 export type GroupMember = {

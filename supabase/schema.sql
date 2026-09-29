@@ -353,6 +353,48 @@ begin
 end;
 $$;
 
+-- Browse groups without exposing invite codes or allowing access to their
+-- member data. Membership and streak visibility remain protected by RLS.
+create or replace function discover_groups()
+returns table (id uuid, name text, created_at timestamptz, member_count bigint)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select g.id, g.name, g.created_at, count(gm.user_id)::bigint as member_count
+  from groups g
+  left join group_members gm on gm.group_id = g.id
+  where auth.uid() is not null
+    and not exists (
+      select 1 from group_members own_members
+      where own_members.group_id = g.id and own_members.user_id = auth.uid()
+    )
+  group by g.id, g.name, g.created_at
+  order by count(gm.user_id) desc, g.created_at desc;
+$$;
+
+create or replace function join_group_by_id(target_group_id uuid)
+returns groups
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  g groups;
+begin
+  if auth.uid() is null then raise exception 'Not signed in'; end if;
+  select * into g from groups where id = target_group_id;
+  if g.id is null then raise exception 'Group not found'; end if;
+
+  insert into group_members (group_id, user_id, role)
+  values (g.id, auth.uid(), 'member')
+  on conflict (group_id, user_id) do nothing;
+
+  return g;
+end;
+$$;
+
 -- ============================================================================
 -- Scheduling the sync cron with pg_cron (alternative to Dashboard cron UI):
 -- ============================================================================

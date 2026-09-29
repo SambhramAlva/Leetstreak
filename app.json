@@ -9,10 +9,7 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "splash": {
-      "backgroundColor": "#0F1115",
-      "resizeMode": "contain"
-    },
+    
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.yourteam.leetstreak"

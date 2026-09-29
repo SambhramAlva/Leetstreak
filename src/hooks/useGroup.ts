@@ -1,7 +1,7 @@
 import { useEffect, useId } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import type { Group, Profile, Streak } from "@/types/database";
+import type { DiscoverableGroup, Group, Profile, Streak } from "@/types/database";
 
 export type MemberWithStats = Profile & {
   streak: Streak | null;
@@ -35,8 +35,15 @@ export function useMyGroups(userId: string | undefined) {
         .select("*")
         .in("id", groupIds);
       if (groupErr) throw groupErr;
+      const { data: groupMembers, error: memberErr } = await supabase
+        .from("group_members")
+        .select("group_id")
+        .in("group_id", groupIds);
+      if (memberErr) throw memberErr;
+      const memberCounts = new Map<string, number>();
+      for (const row of groupMembers ?? []) memberCounts.set(row.group_id, (memberCounts.get(row.group_id) ?? 0) + 1);
       const order = new Map(groupIds.map((id, index) => [id, index]));
-      return (groups ?? []).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+      return (groups ?? []).map((group) => ({ ...group, member_count: memberCounts.get(group.id) ?? 0 })).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
     },
     enabled: !!userId,
   });
@@ -45,6 +52,18 @@ export function useMyGroups(userId: string | undefined) {
 export function useMyGroup(userId: string | undefined) {
   const query = useMyGroups(userId);
   return { ...query, data: query.data?.[0] ?? null };
+}
+
+export function useDiscoverableGroups(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["discoverable-groups", userId],
+    queryFn: async (): Promise<DiscoverableGroup[]> => {
+      const { data, error } = await supabase.rpc("discover_groups");
+      if (error) throw error;
+      return (data ?? []) as DiscoverableGroup[];
+    },
+    enabled: !!userId,
+  });
 }
 
 function generateInviteCode(): string {
@@ -101,7 +120,18 @@ export function useGroupActions(userId: string | undefined) {
     return data as unknown as Group;
   }
 
-  return { createGroup, joinGroup };
+  async function joinGroupById(groupId: string): Promise<Group> {
+    if (!userId) throw new Error("Not signed in");
+    await ensureProfile(userId);
+
+    const { data, error } = await supabase.rpc("join_group_by_id", { target_group_id: groupId });
+    if (error) throw error;
+    queryClient.invalidateQueries({ queryKey: ["my-groups", userId] });
+    queryClient.invalidateQueries({ queryKey: ["discoverable-groups", userId] });
+    return data as unknown as Group;
+  }
+
+  return { createGroup, joinGroup, joinGroupById };
 }
 
 export function useGroupMembers(groupId: string | undefined) {
