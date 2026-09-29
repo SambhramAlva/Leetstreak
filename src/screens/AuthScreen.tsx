@@ -1,26 +1,25 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
-import { spacing, radius } from "@/theme/theme";
+import { spacing, radius, fonts } from "@/theme/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { Screen, TextField, Button } from "@/components/Shared";
 import { useResponsive } from "@/hooks/useResponsive";
-import { AppIcon } from "@/components/AppIcon";
-import { fonts } from "@/theme/theme";
+import { AnimatedLogo } from "@/components/AnimatedLogo";
+import { useAlert } from "@/context/AlertContext";
 
 export function AuthScreen() {
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
   const { signIn, signUp } = useAuth();
+  const { showAlert } = useAlert();
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function submit() {
-    setError(null);
     setLoading(true);
     try {
       if (mode === "signIn") {
@@ -30,7 +29,11 @@ export function AuthScreen() {
         await signUp(email.trim(), password, username.trim());
       }
     } catch (e: any) {
-      setError(e.message ?? "Something went wrong");
+      showAlert({
+        type: "error",
+        title: mode === "signIn" ? "Sign in failed" : "Sign up failed",
+        message: e.message ?? "Something went wrong. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -45,7 +48,10 @@ export function AuthScreen() {
         ]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.brand}><AppIcon name="flame" size={25} color={colors.primary} strokeWidth={2.5} /><Text style={[styles.logo, { color: colors.primary }]}>LeetStreak</Text></View>
+        <View style={styles.brand}>
+          <AnimatedLogo size={40} />
+          <Text style={[styles.logo, { color: colors.primary }]}>LeetStreak</Text>
+        </View>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           {mode === "signIn" ? "Welcome back" : "Create your account"}
         </Text>
@@ -72,8 +78,6 @@ export function AuthScreen() {
             value={password}
             onChangeText={setPassword}
           />
-
-          {error && <Text style={{ color: colors.danger }}>{error}</Text>}
 
           <Button
             title={mode === "signIn" ? "Sign in" : "Sign up"}

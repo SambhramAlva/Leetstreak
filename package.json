@@ -30,7 +30,7 @@
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo/metro-runtime": "~3.2.3",
-    "@lottiefiles/dotlottie-react": "^0.19.16",
+    "@lottiefiles/dotlottie-react": "^0.13.5",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-navigation/bottom-tabs": "^7.19.2",

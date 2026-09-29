@@ -10,6 +10,8 @@ import { useGroupMembers } from "@/hooks/useGroup";
 import { useProfile } from "@/hooks/useProfile";
 import { LeetCodeCard } from "@/components/LeetCodeCard";
 import { useResponsive } from "@/hooks/useResponsive";
+import { AnimatedLogo } from "@/components/AnimatedLogo";
+import { fonts } from "@/theme/theme";
 import type { Group } from "@/types/database";
 
 export function HomeScreen({ userId, group }: { userId: string; group: Group }) {
@@ -121,6 +123,10 @@ export function HomeScreen({ userId, group }: { userId: string; group: Group }) 
         ListHeaderComponent={
           <View style={{ gap: spacing.lg, marginBottom: spacing.lg }}>
             <View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs, marginBottom: spacing.xs }}>
+                <AnimatedLogo size={24} />
+                <Text style={{ fontSize: 18, fontWeight: "800", fontFamily: fonts.display, color: colors.primary }}>LeetStreak</Text>
+              </View>
               <Text style={[styles.groupName, { color: colors.textMuted }]}>{group.name}</Text>
               <Text style={[styles.heading, { color: colors.text }]}>Your streak</Text>
             </View>

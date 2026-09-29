@@ -6,6 +6,8 @@ export const lightColors = {
   textMuted: "#767676",
   primary: "#FFA116",
   danger: "#EF4743",
+  success: "#22C55E",
+  warning: "#F59E0B",
   card: "#FFFFFF",
   tabBar: "#FFFFFF",
 };
@@ -18,6 +20,8 @@ export const darkColors = {
   textMuted: "#A7A7A7",
   primary: "#FFA116",
   danger: "#FF716B",
+  success: "#4ADE80",
+  warning: "#FBBF24",
   card: "#282828",
   tabBar: "#282828",
 };
