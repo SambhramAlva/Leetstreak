@@ -5,6 +5,8 @@ import { spacing, radius, fonts } from "@/theme/theme";
 import type { Group } from "@/types/database";
 import { AppIcon, AppIconName } from "@/components/AppIcon";
 
+import { AnimatedLogo } from "@/components/AnimatedLogo";
+
 type TabName = "Home" | "Group" | "Chat" | "Profile" | "Admin";
 
 interface DesktopHeaderProps {
@@ -40,6 +42,7 @@ export function DesktopHeader({ currentTab, onSelectTab, group, groups = [], onS
       <View style={styles.headerContent}>
         {/* Brand logo & Group Badge */}
         <View style={styles.brandRow}>
+          <AnimatedLogo size={28} />
           <Text style={[styles.brandLogo, { color: colors.primary }]}>LeetStreak</Text>
           {groups.length > 0 && (
             <View style={styles.groupSwitcher}>

@@ -42,7 +42,6 @@ function MainTabs({ userId, group, groups, onGroupChange, isAdmin }: { userId: s
   return (
     <Tab.Navigator
       screenOptions={({ route, navigation }) => ({
-        tabBarPosition: "bottom",
         headerShown: showDesktopNav,
         header: () => (
           <DesktopHeader
@@ -67,15 +66,17 @@ function MainTabs({ userId, group, groups, onGroupChange, isAdmin }: { userId: s
             alignSelf: "center",
           }),
         },
-        tabBarIcon: ({ color, focused }) => <AppIcon name={TAB_ICONS[route.name]} size={19} color={color} strokeWidth={focused ? 2.5 : 2} />,
+        tabBarIcon: ({ color, focused }) => (
+          <AppIcon name={TAB_ICONS[route.name] ?? "home"} size={19} color={color} strokeWidth={focused ? 2.5 : 2} />
+        ),
       })}
     >
-      <Tab.Screen name="Home">{() => <HomeScreen userId={userId} group={group} />}</Tab.Screen>
-      <Tab.Screen name="Group">{() => <GroupScreen userId={userId} group={group} groups={groups} onSelectGroup={onGroupChange} />}</Tab.Screen>
-      <Tab.Screen name="Chat">{() => <ChatScreen userId={userId} group={group} />}</Tab.Screen>
-      <Tab.Screen name="Profile">{() => <ProfileScreen userId={userId} />}</Tab.Screen>
+      <Tab.Screen name="Home" children={() => <HomeScreen userId={userId} group={group} />} />
+      <Tab.Screen name="Group" children={() => <GroupScreen userId={userId} group={group} groups={groups} onSelectGroup={onGroupChange} />} />
+      <Tab.Screen name="Chat" children={() => <ChatScreen userId={userId} group={group} />} />
+      <Tab.Screen name="Profile" children={() => <ProfileScreen userId={userId} />} />
       {isAdmin ? (
-        <Tab.Screen name="Admin">{() => <AdminDashboardScreen />}</Tab.Screen>
+        <Tab.Screen name="Admin" children={() => <AdminDashboardScreen />} />
       ) : null}
     </Tab.Navigator>
   );

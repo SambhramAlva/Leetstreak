@@ -22,5 +22,6 @@ export type AppIconName = keyof typeof icons;
 
 export function AppIcon({ name, size = 18, color = "currentColor", strokeWidth = 2 }: { name: AppIconName; size?: number; color?: string; strokeWidth?: number }) {
   const Icon = icons[name];
+  if (!Icon) return null;
   return <Icon {...({ size, color, strokeWidth } as any)} />;
 }

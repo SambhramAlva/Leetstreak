@@ -19,6 +19,8 @@ const queryClient = new QueryClient({
   },
 });
 
+import { AlertProvider } from "@/context/AlertContext";
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     DMSans_400Regular: require("@expo-google-fonts/dm-sans/400Regular/DMSans_400Regular.ttf"),
@@ -33,8 +35,10 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <StatusBar style="auto" />
-        <RootNavigator />
+        <AlertProvider>
+          <StatusBar style="auto" />
+          <RootNavigator />
+        </AlertProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -15,6 +15,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { spacing, radius, fonts } from "@/theme/theme";
 
 import { useResponsive } from "@/hooks/useResponsive";
+import { AnimatedLoading } from "@/components/AnimatedLoading";
 
 export function Screen({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   const { colors } = useTheme();
@@ -33,8 +34,8 @@ export function LoadingState({ label }: { label?: string }) {
   const { colors } = useTheme();
   return (
     <View style={styles.center}>
-      <ActivityIndicator color={colors.primary} size="large" />
-      {label ? <Text style={{ color: colors.textMuted, marginTop: spacing.sm, fontWeight: "500" }}>{label}</Text> : null}
+      <AnimatedLoading size={72} />
+      {label ? <Text style={{ color: colors.textMuted, marginTop: spacing.md, fontWeight: "500" }}>{label}</Text> : null}
     </View>
   );
 }
